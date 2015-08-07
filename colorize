@@ -1,0 +1,198 @@
+#!/usr/bin/env python
+
+"""
+Colorize
+
+Generate themes.
+
+Greatly inspired by coleifer's themer.py
+(https://gist.github.com/coleifer/33484bff21c34644dae1)
+
+"""
+
+import os
+import re
+import yaml
+import shutil
+import socket
+import logging
+
+from itertools import cycle
+from jinja2 import Environment, FileSystemLoader
+from subprocess import Popen, PIPE
+try:
+    import Image, ImageDraw
+except ImportError:
+    from PIL import Image, ImageDraw, ImageFont
+
+from pprint import pprint as pp
+
+logger = logging.getLogger(__name__)
+
+COLORIZE_ROOT = os.path.join(os.getenv('HOME'), '.colors')
+TEMPLATES_ROOT = os.path.join(COLORIZE_ROOT, 'templates')
+
+
+def read_config(config_file):
+    """Read a yaml config file.
+    """
+    logger.debug('Reading config file: {}'.format(config_file))
+    with open(config_file) as f:
+        data = yaml.load(f)
+    return data
+
+
+def render_templates(template_dir, files, context):
+    """Render templates from `template_dir`.
+    """
+    env = Environment(loader=FileSystemLoader(template_dir))
+    logger.debug('Jinja environment configured for: {}'.format(template_dir))
+
+    for src, dst in files.items():
+        dir_name = os.path.dirname(dst)
+        if not os.path.exists(dir_name):
+            logger.debug('Creating directory {}.'.format(dir_name))
+            os.makedirs(dir_name)
+        if src.endswith(('tpl', 'conf')):
+            logger.info('Writing {} -> {}'.format(src, dst))
+            template = env.get_template(src)
+            with open(dst, 'w') as f:
+                f.write(template.render(**context))
+        else:
+            logger.info('Copying {} -> {}'.format(src, dst))
+            shutil.copy(os.path.join(template_dir, src), dst)
+
+
+def hex2rgb(h):
+    """Convert #xxxxxx to (xxx, xxx, xxx).
+    """
+    h = h.lstrip('#')
+    return tuple(map(lambda n: int(n, 16), [h[i:i+2] for i in range(0, 6, 2)]))
+
+
+def create_wallpaper(text, subtext, config, w=2560, h=1440, filename='wallpaper.png'):
+    """Create a wallpaper with given text and subtext, using colors from template.
+    """
+    # We just want to cycle on some colors
+    background = hex2rgb(config['colors']['background'])
+    image = Image.new('RGB', (w, h), background)
+    font_h = ImageFont.truetype(config['font_text'], config['font_size_text'])
+    font_s = ImageFont.truetype(config['font_subtext'], config['font_size_subtext'])
+    text_image = Image.new('RGB', (w * 2, h * 2), background)
+    d1 = ImageDraw.Draw(text_image)
+    d1.setfont(font_h)
+    d2 = ImageDraw.Draw(image)
+    d2.setfont(font_s)
+
+    # Get hostname and uname output
+    xh, yh = d1.textsize(text)
+    xs, ys = d2.textsize(subtext)
+    # I dont want the text to be sticked to the edges. Yes, magic numbers…
+    yhoffset = yh + ys + 100
+    ysoffset = ys + 100
+
+    # Center things
+    if xh > xs:
+        xhoffset = xh + 50
+        xsoffset = xh//2 + xs//2 + 50
+    else:
+        xsoffset = xs + 50
+        xhoffset = xs//2 + xh//2 + 50
+
+    def draw_text(text, used_colors, base_x, base_y, font):
+        """Draw a text using one color per character.
+        """
+        # This code is used to color each character with a different color
+        # See this Stack overflow answer:
+        # http://stackoverflow.com/a/19213360/5122852
+        fill = ' k '
+        w_fill, y = d1.textsize(fill)
+        x = base_x
+        x_paste = x
+        color_cycle = cycle(used_colors)
+        for c in text:
+            w_full = d1.textsize(fill + c)[0]
+            w = w_full - w_fill
+            d1.text((x, base_y), fill + c, font=font,
+                fill=hex2rgb(config['colors'][color_cycle.__next__()]))
+            iletter = text_image.crop((x + w_fill, base_y, x + w_full, base_y + y))
+            image.paste(iletter, (x_paste, base_y))
+            x += w_full
+            x_paste += w
+    # Draw first bottom then top (nice depth effect :))
+    draw_text(text, config['colors_bot'], w - xhoffset, h - yhoffset, font_h)
+    draw_text(text, config['colors_top'], w - xhoffset - 8, h - yhoffset - 8, font_h)
+
+    # And draw subtext.
+    d2.text((w - xsoffset, h -ysoffset), subtext, font=font_s,
+            fill=hex2rgb(config['colors']['white']))
+
+    image.save('/home/meow/tmp/wallpaper.png')
+    # image.save(os.path.join(template_dir, filename), 'PNG')
+    return filename
+
+
+class ColorParser(object):
+    """Default color parser, read colors from a Xresourses formated file.
+    """
+    color_re = re.compile('.*?(color[^:]+|background|foreground):\s*(#[\da-f]{6})')
+
+    def __init__(self, color_file):
+        self.color_file = color_file
+        self.colors = {}
+
+    def map_colors(self):
+        return {
+            'background': 'background',
+            'foreground': 'foreground',
+            'color0': 'black',
+            'color8': 'bblack',
+            'color1': 'red',
+            'color9': 'bred',
+            'color2': 'green',
+            'color10': 'bgreen',
+            'color3': 'yellow',
+            'color11': 'byellow',
+            'color4': 'blue',
+            'color12': 'bblue',
+            'color5': 'magenta',
+            'color13': 'bmagenta',
+            'color6': 'cyan',
+            'color14': 'bcyan',
+            'color7': 'white',
+            'color15': 'bwhite'}
+
+    def read(self):
+        color_map = self.map_colors()
+
+        with open(self.color_file) as f:
+            for line in f.readlines():
+                if line.startswith('!'):
+                    continue
+                match = self.color_re.search(line.lower())
+                if match:
+                    colorname, color = match.groups()
+                    try:
+                        self.colors[color_map[colorname]] = color
+                    except KeyError:
+                        self.colors[colorname] = color
+        if len(self.colors) < 16:
+            logging.warning(
+                    'Error, only {} colors in color file {}'.format(
+                        len(self.colors), self.color_file))
+
+        return self.colors
+
+
+if __name__ == '__main__':
+    config = read_config(os.path.join(COLORIZE_ROOT, 'config.yaml'))
+    colors = ColorParser('/home/meow/tmp/colos').read()
+    config['colors'] = colors
+    pp(config)
+    text = socket.gethostname()
+    uname = Popen(['uname', '-a'], stdout=PIPE)
+    subtext, _ = uname.communicate()
+    subtext = subtext.decode(encoding='utf-8').rstrip()
+    create_wallpaper(text, subtext, config,
+                     w=config['wallpaper_width'],
+                     h=config['wallpaper_height'])
