@@ -162,6 +162,10 @@ def new_theme(name, color_source, config):
                      w=config['wallpaper_width'],
                      h=config['wallpaper_height'])
 
+    # Dump colors in a yaml file for re-using
+    with open(os.path.join(dest, 'colors.yaml'), 'w') as f:
+        yaml.dump(colors, f, default_flow_style=False)
+
 class ColorParser(object):
     """Default color parser, read colors from a Xresourses formated file.
     """
