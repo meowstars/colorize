@@ -50,6 +50,12 @@ def render_templates(template_dir, files, context):
     env = Environment(loader=FileSystemLoader(template_dir))
     logger.debug('Jinja environment configured for: {}'.format(template_dir))
 
+    # Define custom filters
+    def format_sh(hexcolor):
+        """Format colors for sh template."""
+        return hexcolor[1:3] + '/' + hexcolor[3:5] + '/' + hexcolor[5:]
+    env.filters['format_sh'] = format_sh
+
     for src, dst in files.items():
         dir_name = os.path.dirname(dst)
         if not os.path.exists(dir_name):
