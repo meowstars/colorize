@@ -44,6 +44,21 @@ def read_config(config_file):
     return data
 
 
+def symlink(name):
+    """Create a symlink to the current theme.
+    """
+    logger.info('Setting {} as current theme.'.format(name))
+    current = os.path.join(COLORIZE_ROOT, 'current')
+    if os.path.islink(current):
+        os.unlink(current)
+    os.symlink(os.path.join(COLORIZE_ROOT, name), current)
+
+
+def activate_theme(name):
+    """Activate the theme.
+    """
+    symlink(name)
+
 def render_templates(template_dir, files, context):
     """Render templates from `template_dir`.
     """
@@ -218,6 +233,16 @@ class ColorParser(object):
         return self.colors
 
 
+class YamlColorParser(ColorParser):
+    """Get colors from a yaml file.
+    """
+
+    def read(self):
+        with open(sefl.color_file) as f:
+            self.colors = yaml.load(f)
+        return self.colors
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', action='store')
@@ -238,3 +263,5 @@ if __name__ == '__main__':
     config = read_config(os.path.join(COLORIZE_ROOT, 'config.yaml'))
     if args['action'] == 'new':
         new_theme(args['name'], args['colors'], config)
+    if args['action'] == 'activate':
+        activate_theme(args['name'])
