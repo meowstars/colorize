@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Colorize
@@ -12,10 +12,12 @@ Greatly inspired by coleifer's themer.py
 
 import os
 import re
+import sys
 import yaml
 import shutil
 import socket
 import logging
+import argparse
 
 from itertools import cycle
 from jinja2 import Environment, FileSystemLoader
@@ -127,10 +129,32 @@ def create_wallpaper(text, subtext, config, w=2560, h=1440, filename='wallpaper.
     d2.text((w - xsoffset, h -ysoffset), subtext, font=font_s,
             fill=hex2rgb(config['colors']['white']))
 
-    image.save('/home/meow/tmp/wallpaper.png')
-    # image.save(os.path.join(template_dir, filename), 'PNG')
+    image.save(os.path.join(config['destination'], filename), 'PNG')
     return filename
 
+
+def new_theme(name, color_source, config):
+    """Create a new theme."""
+    dest = os.path.join(COLORIZE_ROOT, name)
+    if os.path.isfile(color_source):
+        colors = ColorParser(color_source).read()
+    config['colors'] = colors
+    config['theme_name'] = name
+    config['destination'] = dest
+    files = {
+        key: os.path.join(dest, value)
+        for key, value in config['files'].items()}
+
+    render_templates(TEMPLATES_ROOT, files, config)
+
+    # Generate wallpaper
+    text = socket.gethostname()
+    uname = Popen(['uname', '-a'], stdout=PIPE)
+    subtext, _ = uname.communicate()
+    subtext = subtext.decode(encoding='utf-8').rstrip()
+    create_wallpaper(text, subtext, config,
+                     w=config['wallpaper_width'],
+                     h=config['wallpaper_height'])
 
 class ColorParser(object):
     """Default color parser, read colors from a Xresourses formated file.
@@ -185,14 +209,22 @@ class ColorParser(object):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', '-c', action='store')
+    subparsers = parser.add_subparsers(dest='action')
+
+    # Create new theme
+    parser_new = subparsers.add_parser('new', help='Create a new theme')
+    parser_new.add_argument('name')
+    parser_new.add_argument('colors')
+
+    # Activate a theme
+    parser_activate = subparsers.add_parser('activate',
+                                            help='Activate a theme')
+    parser_activate.add_argument('name')
+
+    args = vars(parser.parse_args())
+
     config = read_config(os.path.join(COLORIZE_ROOT, 'config.yaml'))
-    colors = ColorParser('/home/meow/tmp/colos').read()
-    config['colors'] = colors
-    pp(config)
-    text = socket.gethostname()
-    uname = Popen(['uname', '-a'], stdout=PIPE)
-    subtext, _ = uname.communicate()
-    subtext = subtext.decode(encoding='utf-8').rstrip()
-    create_wallpaper(text, subtext, config,
-                     w=config['wallpaper_width'],
-                     h=config['wallpaper_height'])
+    if args['action'] == 'new':
+        new_theme(args['name'], args['colors'], config)
