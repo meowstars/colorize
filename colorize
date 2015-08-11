@@ -93,9 +93,12 @@ def hex2rgb(h):
     return tuple(map(lambda n: int(n, 16), [h[i:i+2] for i in range(0, 6, 2)]))
 
 
-def create_wallpaper(text, subtext, config, w=2560, h=1440, filename='wallpaper.png'):
+def create_wallpaper(text, subtext, config, filename='wallpaper.png'):
     """Create a wallpaper with given text and subtext, using colors from template.
     """
+    # Set some vars
+    w = config['wallpaper_width']
+    h = config['wallpaper_height']
     # We just want to cycle on some colors
     background = hex2rgb(config['colors']['background'])
     image = Image.new('RGB', (w, h), background)
@@ -173,9 +176,7 @@ def new_theme(name, color_source, config):
     uname = Popen(['uname', '-a'], stdout=PIPE)
     subtext, _ = uname.communicate()
     subtext = subtext.decode(encoding='utf-8').rstrip()
-    create_wallpaper(text, subtext, config,
-                     w=config['wallpaper_width'],
-                     h=config['wallpaper_height'])
+    create_wallpaper(text, subtext, config)
 
     # Dump colors in a yaml file for re-using
     with open(os.path.join(dest, 'colors.yaml'), 'w') as f:
