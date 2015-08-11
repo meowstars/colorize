@@ -238,7 +238,7 @@ class YamlColorParser(ColorParser):
     """
 
     def read(self):
-        with open(sefl.color_file) as f:
+        with open(self.color_file) as f:
             self.colors = yaml.load(f)
         return self.colors
 
