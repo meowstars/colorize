@@ -182,6 +182,22 @@ def new_theme(name, color_source, config):
     with open(os.path.join(dest, 'colors.yaml'), 'w') as f:
         yaml.dump(colors, f, default_flow_style=False)
 
+
+def regen_wallpaper(config):
+    """Regenerate current theme's wallpaper.
+    """
+    dest = os.path.join(COLORIZE_ROOT, 'current')
+    colors = YamlColorParser(os.path.join(COLORIZE_ROOT,
+                                          'current/colors.yaml')).read()
+    config['destination'] = dest
+    config['colors'] = colors
+    text = socket.gethostname()
+    uname = Popen(['uname', '-a'], stdout=PIPE)
+    subtext, _ = uname.communicate()
+    subtext = subtext.decode(encoding='utf-8').rstrip()
+    create_wallpaper(text, subtext, config)
+
+
 class ColorParser(object):
     """Default color parser, read colors from a Xresourses formated file.
     """
@@ -259,6 +275,10 @@ if __name__ == '__main__':
                                             help='Activate a theme')
     parser_activate.add_argument('name')
 
+    # Regen current wallpaper
+    parser_regen = subparsers.add_parser('regen',
+                                         help='Regen current theme wallpaper')
+
     args = vars(parser.parse_args())
 
     config = read_config(os.path.join(COLORIZE_ROOT, 'config.yaml'))
@@ -266,3 +286,5 @@ if __name__ == '__main__':
         new_theme(args['name'], args['colors'], config)
     if args['action'] == 'activate':
         activate_theme(args['name'])
+    if args['action'] == 'regen':
+        regen_wallpaper(config)
