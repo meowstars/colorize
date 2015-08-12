@@ -30,6 +30,7 @@ except ImportError:
 from pprint import pprint as pp
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 COLORIZE_ROOT = os.path.join(os.getenv('HOME'), '.colorize')
 TEMPLATES_ROOT = os.path.join(COLORIZE_ROOT, 'templates')
@@ -247,9 +248,8 @@ class ColorParser(object):
                     except KeyError:
                         self.colors[colorname] = color
         if len(self.colors) < 16:
-            logging.warning(
-                    'Error, only {} colors in color file {}'.format(
-                        len(self.colors), self.color_file))
+            logger.warning('Error, only {} colors in color file {}'.format(
+                           len(self.colors), self.color_file))
 
         return self.colors
 
@@ -267,6 +267,7 @@ class YamlColorParser(ColorParser):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', action='store')
+    parser.add_argument('--verbose', '-v', action='store_true')
     subparsers = parser.add_subparsers(dest='action')
 
     # Create new theme
@@ -284,6 +285,13 @@ if __name__ == '__main__':
                                          help='Regen current theme wallpaper')
 
     args = vars(parser.parse_args())
+
+    if args['verbose']:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+        logger.addHandler(handler)
 
     config = read_config(os.path.join(COLORIZE_ROOT, 'config.yaml'))
     if args['action'] == 'new':
