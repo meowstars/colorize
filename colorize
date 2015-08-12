@@ -31,7 +31,7 @@ from pprint import pprint as pp
 
 logger = logging.getLogger(__name__)
 
-COLORIZE_ROOT = os.path.join(os.getenv('HOME'), '.colors')
+COLORIZE_ROOT = os.path.join(os.getenv('HOME'), '.colorize')
 TEMPLATES_ROOT = os.path.join(COLORIZE_ROOT, 'templates')
 
 
