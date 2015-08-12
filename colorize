@@ -102,8 +102,12 @@ def create_wallpaper(text, subtext, config, filename='wallpaper.png'):
     # We just want to cycle on some colors
     background = hex2rgb(config['colors']['background'])
     image = Image.new('RGB', (w, h), background)
-    font_h = ImageFont.truetype(config['font_text'], config['font_size_text'])
-    font_s = ImageFont.truetype(config['font_subtext'], config['font_size_subtext'])
+    font_h = ImageFont.truetype(os.path.join(COLORIZE_ROOT,
+                                             'fonts/' + config['font_text']),
+                                config['font_size_text'])
+    font_s = ImageFont.truetype(os.path.join(COLORIZE_ROOT,
+                                             'fonts/' + config['font_subtext']),
+                                config['font_size_subtext'])
     text_image = Image.new('RGB', (w * 2, h * 2), background)
     d1 = ImageDraw.Draw(text_image)
     d1.setfont(font_h)

@@ -1,5 +1,5 @@
-font_text: '/home/meow/.fonts/FingerPaint-Regular.ttf'
-font_subtext: '/home/meow/.fonts/FingerPaint-Regular.ttf'
+font_text: 'FingerPaint-Regular.ttf'
+font_subtext: 'FingerPaint-Regular.ttf'
 font_size_text: 150
 font_size_subtext: 15
 colors_top: [red, green, yellow, blue, magenta, cyan]
