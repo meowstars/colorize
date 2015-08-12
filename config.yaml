@@ -1,0 +1,13 @@
+font_text: '/home/meow/.fonts/FingerPaint-Regular.ttf'
+font_subtext: '/home/meow/.fonts/FingerPaint-Regular.ttf'
+font_size_text: 150
+font_size_subtext: 15
+colors_top: [red, green, yellow, blue, magenta, cyan]
+colors_bot: [bred, bgreen, byellow, bblue, bmagenta, bcyan]
+wallpaper_width: 2560
+wallpaper_height: 1440
+
+files:
+    i3.tpl: i3.conf
+    sh.tpl: colors.sh
+    conky.tpl: conky.sed
