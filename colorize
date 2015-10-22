@@ -12,6 +12,7 @@ Greatly inspired by coleifer's themer.py
 
 import os
 import re
+import sys
 import yaml
 import shutil
 import socket
@@ -163,11 +164,24 @@ def create_wallpaper(text, subtext, config, filename='wallpaper.png'):
     return filename
 
 
+def _get_colors(color_source):
+    if os.path.isfile(color_source):
+        for parser in COLOR_PARSERS.values():
+            colors = parser.read(color_source)
+            if len(colors) >= 18:
+                return colors
+    else:
+        print('{} does not exist.'.format(color_source))
+    return None
+
+
 def new_theme(name, color_source, config):
     """Create a new theme."""
     dest = os.path.join(COLORIZE_ROOT, name)
-    if os.path.isfile(color_source):
-        colors = ColorParser(color_source).read()
+    colors = _get_colors(color_source)
+    if not colors:
+        print('Not enouth colors in {}, aborting…'.format(color_source))
+        sys.exit(1)
     config['colors'] = colors
     config['theme_name'] = name
     config['destination'] = dest
@@ -193,8 +207,8 @@ def regen_config(config):
     """Regenerate current theme's config files and wallpaper.
     """
     dest = os.path.join(COLORIZE_ROOT, 'current')
-    colors = YamlColorParser(os.path.join(COLORIZE_ROOT,
-                                          'current/colors.yaml')).read()
+    colors = COLOR_PARSERS['yaml'].read(os.path.join(COLORIZE_ROOT,
+                                                     'current/colors.yaml'))
     config['destination'] = dest
     config['colors'] = colors
     files = {
@@ -210,13 +224,10 @@ def regen_config(config):
 
 
 class ColorParser(object):
-    """Default color parser, read colors from a Xresourses formated file.
+    """Default color parser.
     """
-    regex = '.*?(color[^:]+|background|foreground):\s*(#[\da-f]{6})'
-    color_re = re.compile(regex)
 
-    def __init__(self, color_file):
-        self.color_file = color_file
+    def __init__(self):
         self.colors = {}
 
     def map_colors(self):
@@ -240,24 +251,30 @@ class ColorParser(object):
             'color7': 'white',
             'color15': 'bwhite'}
 
-    def read(self):
+
+class RegexColorParser(ColorParser):
+    """Regex based color parsing.
+    """
+
+    def __init__(self, regex):
+        self.colors = {}
+        self.regex = re.compile(regex)
+
+    def read(self, color_file):
         color_map = self.map_colors()
 
-        with open(self.color_file) as f:
+        with open(color_file) as f:
             for line in f.readlines():
                 if line.startswith('!'):
                     continue
-                match = self.color_re.search(line.lower())
+                match = self.regex.search(line.lower())
                 if match:
                     colorname, color = match.groups()
+                    colorname = colorname.rstrip()
                     try:
                         self.colors[color_map[colorname]] = color
                     except KeyError:
                         self.colors[colorname] = color
-        if len(self.colors) < 16:
-            logger.warning('Error, only {} colors in color file {}'.format(
-                           len(self.colors), self.color_file))
-
         return self.colors
 
 
@@ -265,11 +282,22 @@ class YamlColorParser(ColorParser):
     """Get colors from a yaml file.
     """
 
-    def read(self):
-        with open(self.color_file) as f:
-            self.colors = yaml.load(f)
+    def read(self, color_file):
+        with open(color_file) as f:
+            try:
+                self.colors = yaml.load(f)
+            except yaml.parser.ParserError:
+                return {}
         return self.colors
 
+
+COLOR_PARSERS = {
+    'xres': RegexColorParser(
+        '.*?(color[^:]+|background|foreground):\s*(#[\da-f]{6})'),
+    'ini': RegexColorParser(
+        '(color[^:]+|background|foreground)\s*=\s*(#[\da-f]{6})'),
+    'yaml': YamlColorParser(),
+}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
