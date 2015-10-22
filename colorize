@@ -12,7 +12,6 @@ Greatly inspired by coleifer's themer.py
 
 import os
 import re
-import sys
 import yaml
 import shutil
 import socket
@@ -26,8 +25,6 @@ try:
     import Image, ImageDraw
 except ImportError:
     from PIL import Image, ImageDraw, ImageFont
-
-from pprint import pprint as pp
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -59,6 +56,7 @@ def activate_theme(name):
     """Activate the theme.
     """
     symlink(name)
+
 
 def render_templates(template_dir, files, context):
     """Render templates from `template_dir`.
@@ -106,8 +104,9 @@ def create_wallpaper(text, subtext, config, filename='wallpaper.png'):
     font_h = ImageFont.truetype(os.path.join(COLORIZE_ROOT,
                                              'fonts/' + config['font_text']),
                                 config['font_size_text'])
-    font_s = ImageFont.truetype(os.path.join(COLORIZE_ROOT,
-                                             'fonts/' + config['font_subtext']),
+    font_s = ImageFont.truetype(os.path.join(
+                                    COLORIZE_ROOT,
+                                    'fonts/' + config['font_subtext']),
                                 config['font_size_subtext'])
     text_image = Image.new('RGB', (w * 2, h * 2), background)
     d1 = ImageDraw.Draw(text_image)
@@ -145,17 +144,19 @@ def create_wallpaper(text, subtext, config, filename='wallpaper.png'):
             w_full = d1.textsize(fill + c)[0]
             w = w_full - w_fill
             d1.text((x, base_y), fill + c, font=font,
-                fill=hex2rgb(config['colors'][color_cycle.__next__()]))
-            iletter = text_image.crop((x + w_fill, base_y, x + w_full, base_y + y))
+                    fill=hex2rgb(config['colors'][color_cycle.__next__()]))
+            iletter = text_image.crop((x + w_fill, base_y,
+                                       x + w_full, base_y + y))
             image.paste(iletter, (x_paste, base_y))
             x += w_full
             x_paste += w
     # Draw first bottom then top (nice depth effect :))
     draw_text(text, config['colors_bot'], w - xhoffset, h - yhoffset, font_h)
-    draw_text(text, config['colors_top'], w - xhoffset - 8, h - yhoffset - 8, font_h)
+    draw_text(text, config['colors_top'],
+              w - xhoffset - 8, h - yhoffset - 8, font_h)
 
     # And draw subtext.
-    d2.text((w - xsoffset, h -ysoffset), subtext, font=font_s,
+    d2.text((w - xsoffset, h - ysoffset), subtext, font=font_s,
             fill=hex2rgb(config['colors']['white']))
 
     image.save(os.path.join(config['destination'], filename), 'PNG')
@@ -206,7 +207,8 @@ def regen_wallpaper(config):
 class ColorParser(object):
     """Default color parser, read colors from a Xresourses formated file.
     """
-    color_re = re.compile('.*?(color[^:]+|background|foreground):\s*(#[\da-f]{6})')
+    regex = '.*?(color[^:]+|background|foreground):\s*(#[\da-f]{6})'
+    color_re = re.compile(regex)
 
     def __init__(self, color_file):
         self.color_file = color_file
@@ -282,13 +284,14 @@ if __name__ == '__main__':
 
     # Regen current wallpaper
     parser_regen = subparsers.add_parser('regen',
-                                         help='Regen current theme wallpaper')
+                                         help='Regen current theme config')
 
     args = vars(parser.parse_args())
 
     if args['verbose']:
         handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(name)s '
+                                      '- %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         handler.setLevel(logging.INFO)
         logger.addHandler(handler)
