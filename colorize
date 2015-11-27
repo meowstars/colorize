@@ -286,7 +286,7 @@ class YamlColorParser(ColorParser):
         with open(color_file) as f:
             try:
                 self.colors = yaml.load(f)
-            except yaml.parser.ParserError:
+            except Exception:
                 return {}
         return self.colors
 
