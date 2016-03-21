@@ -1,0 +1,23 @@
+Colorize
+========
+
+Colorize your term apps!
+
+Requirements
+------------
+
+- Python3
+- pillow
+- PyYAML
+- Jinja2
+
+Quickstart
+----------
+
+- `mkdir ~/.colorize`
+- `cp -r examples/* ~/.colorize/`
+- grab some color palette in xresources format, in /tmp/colors for example
+- `colorize new mytheme /tmp/colors`
+- `colorize activate mytheme`
+- Use your configuration files created in ~/.colorize/current/
+- Profit!
